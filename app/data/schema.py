@@ -1,3 +1,5 @@
+import sqlite3
+
 def create_users_table(conn):
     """Create users table."""
     cursor = conn.cursor()
@@ -6,24 +8,31 @@ def create_users_table(conn):
                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
                    username TEXT NOT NULL UNIQUE,
                    password_hash TEXT NOT NULL,
-                   role TEXT DEFAULT 'users'
+                   role TEXT DEFAULT 'user', 
+                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     conn.commit()
+    print("Users table is created.")
 
 def create_cyber_incidents_table(conn):
     """Create cyber incidents table."""
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS cyber_incidents (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                    title TEXT NOT NULL,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT,
+                    incident_type TEXT,
                     severity TEXT NOT NULL,
                     status TEXT DEFAULT 'open',
-                    date TEXT
+                    description TEXT,
+                    reported_by TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (reported_by) REFERENCES users(username)
         )
     """)
     conn.commit()
+    print("Cyber incidents table is created.")
 
 def create_datasets_metadata_table(conn):
     """Create datasets_metadata table."""

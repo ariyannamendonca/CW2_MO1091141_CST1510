@@ -7,9 +7,9 @@ def insert_incident(date, incident_type, severity, status, description, reported
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO cyber_incidents
-        (title, severity, status, date)
-        VALUES (?, ?, ?, ?)
-    """, (incident_type, severity, status, date))
+        (date, incident_type, severity, status, description, reported_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (date, incident_type, severity, status, description, reported_by))
 
     conn.commit()
     incident_id = cursor.lastrowid
