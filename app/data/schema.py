@@ -1,3 +1,5 @@
+import sqlite3
+
 def create_users_table(conn):
     """Create users table."""
     cursor = conn.cursor()
@@ -6,10 +8,12 @@ def create_users_table(conn):
                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
                    username TEXT NOT NULL UNIQUE,
                    password_hash TEXT NOT NULL,
-                   role TEXT DEFAULT 'users'
+                   role TEXT DEFAULT 'users', 
+                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     conn.commit()
+    print("Users table is created.")
 
 def create_cyber_incidents_table(conn):
     """Create cyber incidents table."""
