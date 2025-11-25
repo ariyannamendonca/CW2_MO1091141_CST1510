@@ -54,7 +54,7 @@ def login_user(username, password):
     return False
 
 def validate_username(username):
-  if len(username) < 5:
+  if len(username) < 2:
       print ("Username too short.")
       return False
   if "_ , *" in username:
