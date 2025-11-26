@@ -16,7 +16,7 @@ def insert_incident(conn, date, incident_type, severity, status, description, re
     return cursor.lastrowid
 
 def get_all_incidents(conn):
-    """Get all incidents as DataFrame."""
+    """Get all incidents."""
     df = pd.read_sql_query(
         "SELECT * FROM cyber_incidents ORDER BY incident_id DESC",
         conn
