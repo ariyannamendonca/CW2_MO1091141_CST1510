@@ -1,7 +1,7 @@
 from app.data.db import connect_database, delete_database
 from app.data.schema import create_all_tables
-from app.services.user_service import register_user, login_user, migrate_users_from_file
-from app.data.incidents import insert_incident, get_all_incidents
+from app.services.user_service import register_user, login_user, migrate_users_from_file, load_csv_to_table, DATASETS_CSV, IT_TICKETS_CSV, CYBER_INCIDENTS_CSV
+from app.data.incidents import insert_incident, get_all_incidents, update_incident_status, delete_incident_status
 
 def main():
     print("=" * 60)
@@ -17,27 +17,44 @@ def main():
     # 2. Migrate users
     migrate_users_from_file(conn)
 
-    # 3. Test authentication
-    success, msg = register_user("charlie", "charliepass123!", "analyst")
+    # 3. move csv data
+    print("Moving CSV data")
+    load_csv_to_table(conn, DATASETS_CSV, "datasets_metadata")
+    load_csv_to_table(conn, IT_TICKETS_CSV, "it_tickets")
+    load_csv_to_table(conn, CYBER_INCIDENTS_CSV, "cyber_incidents")
+
+    # 4. Test authentication
+    success, msg = register_user("alice", "SecurePass123!", "analyst")
     print(msg)
 
-    success, msg = login_user("bob", "bob123456789")
+    success, msg = login_user("alice", "SecurePass123!")
     print(msg)
 
-    # 4. Test CRUD
-    incident_id = insert_incident(
+    # 5. Test CRUD
+    incident_id = insert_incident(conn,
         "2024-11-05",
         "Phishing",
         "High",
         "Open",
         "Suspicious email detected",
-        "bob"
+        "alice"
     )
     print(f"Created incident #{incident_id}")
 
-    # 5. Query data
-    df = get_all_incidents()
-    print(f"Total incidents: {len(df)}")
+    df = get_all_incidents(conn)
+    print(f"Total incidents before update: {len(df)}")
+
+    rows_updated = update_incident_status(conn, incident_id,"In Progress")
+    print(f"Updated status for incident #{incident_id}. Rows modified {rows_updated}")
+
+    df = get_all_incidents(conn)
+    print(f"Total incidents after update: {len(df)}")
+
+    rows_deleted = delete_incident_status (conn, incident_id)
+    print(f"Deleted incidents #{incident_id}. Rows deleted {rows_deleted}")
+
+    df = get_all_incidents(conn)
+    print(f"Total incidents after delete: {len(df)}")
 
     conn.close()
 
