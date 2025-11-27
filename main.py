@@ -1,7 +1,11 @@
+from app.data.datasets import get_dataset_by_uploader
 from app.data.db import connect_database, delete_database
 from app.data.schema import create_all_tables
+from app.data.tickets import get_assigned_to_with_many_cases, get_tickets_by_status_count
 from app.services.user_service import register_user, login_user, migrate_users_from_file, load_csv_to_table, DATASETS_CSV, IT_TICKETS_CSV, CYBER_INCIDENTS_CSV
-from app.data.incidents import insert_incident, get_all_incidents, update_incident_status, delete_incident_status
+from app.data.incidents import insert_incident, get_all_incidents, update_incident_status, delete_incident_status, \
+    get_incidents_by_type_count, get_high_severity_by_status
+
 
 def main():
     print("=" * 60)
@@ -79,6 +83,49 @@ def verify_user_migration():
 
     print(f"\nTotal users: {len(users)}")
     conn.close()
+
+#analytical queries for cyber incidents
+conn = connect_database()
+
+print("\n Incidents by Type:")
+df_by_type = get_incidents_by_type_count(conn)
+print(df_by_type)
+
+print("\n High Severity Incidents by Status:")
+df_high_severity = get_high_severity_by_status(conn)
+print(df_high_severity)
+
+print("\n Incident Types with Many Cases (>5):")
+df_many_cases = get_assigned_to_with_many_cases(conn)
+print(df_many_cases)
+
+conn.close()
+
+#analytical queries for IT tickets
+conn = connect_database()
+
+print("\n Tickets by Status:")
+df_by_status = get_tickets_by_status_count(conn)
+print(df_by_status)
+
+print("\n High severity by Priority:")
+df_high_severity = get_high_severity_by_status(conn)
+print(df_high_severity)
+
+print("\n Assigned cases:")
+df_many_cases = get_assigned_to_with_many_cases(conn)
+print(df_many_cases)
+
+conn.close()
+
+#analytical queries for datasets metadata
+conn = connect_database()
+
+print("\n Large datasets by uploader:")
+df_large_datasets = get_dataset_by_uploader(conn)
+print(df_large_datasets)
+
+conn.close()
 
 if __name__ == "__main__":
     main()

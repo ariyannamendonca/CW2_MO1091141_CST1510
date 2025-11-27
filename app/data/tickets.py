@@ -46,3 +46,38 @@ def delete_ticket(conn, ticket_id):
     cursor.execute(sql_delete, (ticket_id,))
     conn.commit()
     return cursor.rowcount
+
+def get_tickets_by_status_count(conn):
+    """Gets tickets by status """
+    query = """
+    SELECT status, COUNT(*) as count
+    FROM it_tickets
+    GROUP BY status
+    ORDER BY count DESC
+    """
+    df = pd.read_sql_query(query, conn)
+    return df
+
+def get_high_severity_by_priority(conn):
+    """Count high severity by priority"""
+    query = """
+    SELECT priority, COUNT(*) as count
+    FROM it_tickets
+    WHERE priority = 'High'
+    GROUP BY priority
+    ORDER BY count DESC
+    """
+    df = pd.read_sql_query(query, conn)
+    return df
+
+def get_assigned_to_with_many_cases(conn, min_count=5):
+    """gets assigned to tickets"""
+    query = """
+    SELECT assigned_to, COUNT(*) as count
+    FROM it_tickets
+    GROUP BY assigned_to
+    HAVING COUNT(*) > ?
+    ORDER BY count DESC
+    """
+    df = pd.read_sql_query(query, conn, params=(min_count,))
+    return df

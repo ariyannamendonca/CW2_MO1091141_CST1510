@@ -1,20 +1,20 @@
 import pandas as pd
 from app.data.db import connect_database
 
-def insert_dataset(conn, dataset_id, name, category, uploaded_by, upload_date,columns, file_size_mb, created_at):
+def insert_dataset(conn, dataset_id, name, category, uploaded_by, upload_date, rows, columns, file_size_mb, created_at):
     """Insert new dataset."""
     cursor = conn.cursor()
 
     sql_insert = """
         INSERT INTO datasets_metadata
-        (dataset_id, name, category, uploaded_by, upload_date, columns, file_size_mb, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (dataset_id, load_date, name, category, uploaded_by, upload_date, rows, columns, file_size_mb, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
 
-    cursor.execute(sql_insert, (dataset_id, name, category, uploaded_by, upload_date, columns, file_size_mb, created_at))
+    cursor.execute(sql_insert, (dataset_id, name, category, uploaded_by, upload_date, rows, columns, file_size_mb, created_at))
 
     conn.commit()
-    return cursor.rowcount
+    return cursor.lastrowid
 
 def get_all_datasets(conn):
     """Gets all dataset metadata as a df."""
@@ -47,3 +47,16 @@ def delete_dataset(conn, dataset_id):
     cursor.execute(sql_delete, (dataset_id,))
     conn.commit()
     return cursor.rowcount
+
+#Analytical queries (the big 6)
+def get_dataset_by_uploader(conn, min_rows=1000):
+    """counts datasets by their uploader if they have more than min_rows"""
+    query="""
+    SELECT uploaded_by, COUNT(*) as count
+    FROM datasets_metadata
+    WHERE rows > ?
+    GROUP BY uploaded_by
+    ORDER BY count DESC
+    """
+    df = pd.read_sql_query(query, conn, params=(min_rows,))
+    return df
