@@ -2,34 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-from app.data.db import connect_database
-from app.data.incidents import get_all_incidents, insert_incident
-from app.data.datasets import get_all_datasets
-from app.data.tickets import get_tickets
-
-conn = connect_database('DATA/intelligence_platform.db')
-
-incidents = get_all_incidents(conn)
-datasets = get_all_datasets(conn)
-tickets = get_tickets(conn)
-
-st.title("Cyber incidents Dashboard")
-
-incident = get_all_incidents(conn)
-st.dataframe(incidents, use_container_width=True)
-
-with st.form("new_incident"):
-    title = st.text_input("Incident Title")
-    severity = st.selectbox("Severity", ["Low", "Medium", "High, Critical"])
-    status = st.selectbox("Status", ["Open", "In Progress", "Resolved"])
-
-    submitted = st.form_submit_button("Add Incident")
-
-    if submitted and title:
-        insert_incident(conn, title, severity, status)
-        st.success("Incident added successfully")
-        st.rerun()
-
 st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
 
 #Ensure state keys exist in case user opens this page first
@@ -45,11 +17,12 @@ if not st.session_state.logged_in:
         st.switch_page("Home.py")
     st.stop()
 
-#if logged in show dashboard
-st.title("📊 Dashboard")
-st.success(f"Hello, **{st.session_state.username}**! You are logged in.")
+#if logged in, show dashboard
+st.title("📊Dashboard")
+st.success(f"Hello, **{st.session_state.username}!** You are logged in.")
 
-st.caption("Welcome Back!")
+#example layout
+st.caption("This is a demo, cant connect db to streamlit.")
 
 #Sidebar filters
 with st.sidebar:
