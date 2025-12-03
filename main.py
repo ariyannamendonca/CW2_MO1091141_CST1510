@@ -94,7 +94,7 @@ def verify_user_migration():
     print(f"{'ID':<5} {'Username':<15} {'Role':<10}")
     print("-" * 35)
     for user in users:
-        print(f"{user[0]:<5} {user[1]:<15} {user[2]:<10}")
+        print(f"{user[0]:<5} {user[1]:<15} {user[2]:<10}") #user id, username, user role
 
     print(f"\nTotal users: {len(users)}")
     conn.close()
