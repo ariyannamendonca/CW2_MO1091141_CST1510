@@ -20,5 +20,21 @@ def insert_user(username, password_hash, role='user'):
         "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
         (username, password_hash, role)
     )
+
+def update_user(conn, username, new_role):
+    """Update user"""
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE users
+        SET role = ?
+        WHERE username = ?
+        """, (new_role, username))
     conn.commit()
-    conn.close()
+    return cursor.rowcount
+
+def delete_user(conn, username):
+    """Delete user"""
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE username = ?", (username,))
+    conn.commit()
+    return cursor.rowcount

@@ -46,7 +46,7 @@ with tab_register:
     st.subheader("Register")
 
     new_username = st.text_input("Choose a username", key="register_username")
-    new_password = st.text_input("Choose a password", key="register_password")
+    new_password = st.text_input("Choose a password", type="password", key="register_password")
     confirm_password = st.text_input("Confirm password", type="password", key="register_confirm")
 
 #basic checks

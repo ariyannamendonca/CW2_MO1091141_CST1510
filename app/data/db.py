@@ -7,7 +7,7 @@ DB_PATH = PROJECT_ROOT / "DATA" / "intelligence_platform.db"
 
 def connect_database(db_path=DB_PATH):
     """Connect to SQLite database"""
-    return sqlite3.connect(str(db_path)) #automatically creates file if it doesnt exist, connection made
+    return sqlite3.connect(str(db_path)) #automatically creates file if it doesn't exist, connection made
 
 def delete_database(db_path=DB_PATH):
     """Deletes database"""
