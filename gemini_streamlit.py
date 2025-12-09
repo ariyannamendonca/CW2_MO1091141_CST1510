@@ -8,7 +8,7 @@ except KeyError:
     st.error("Error: GEMINI API KEY not found in streamlit secrets.toml.")
     st.stop()
 
-st.title("💬 Gemini Chatbot ")
+st.title("💬 Cybersecurity AI Assistant ")
 
 if 'messages' not in st.session_state:
     st.session_state.messages = []
