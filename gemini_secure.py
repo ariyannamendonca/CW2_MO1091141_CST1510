@@ -6,14 +6,13 @@ from google.genai import types
 
 load_dotenv()
 
-#Get api key
-
+#get api key
 api_key = os.getenv("API_KEY")
 if not api_key:
     raise ValueError("API_KEY is missing, add it to the .env file.")
 
 #initalise client & conversation history
-client = genai.Client(api_key="AIzaSyC1yOTdRM1jMbTjMuJhkpQotQmDqkjszQ8")
+client = genai.Client(api_key=api_key)
 
 messages = [
     types.Content(

@@ -1,17 +1,17 @@
 import pandas as pd
 from app.data.db import connect_database
 
-def insert_dataset(conn, dataset_id, name, category, uploaded_by, upload_date, rows, columns, file_size_mb, created_at):
+def insert_dataset(conn, name, category, uploaded_by, upload_date, rows, columns, file_size_mb, created_at):
     """Insert new dataset."""
     cursor = conn.cursor()
 
     sql_insert = """
         INSERT INTO datasets_metadata
-        (dataset_id, load_date, name, category, uploaded_by, upload_date, rows, columns, file_size_mb, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (name, category, uploaded_by, upload_date, rows, columns, file_size_mb, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """
 
-    cursor.execute(sql_insert, (dataset_id, name, category, uploaded_by, upload_date, rows, columns, file_size_mb, created_at))
+    cursor.execute(sql_insert, (name, category, uploaded_by, upload_date, rows, columns, file_size_mb, created_at))
 
     conn.commit()
     return cursor.lastrowid
