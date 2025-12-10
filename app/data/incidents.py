@@ -81,3 +81,9 @@ def get_incidents_type_with_many_cases(conn, min_count=5):
     """
     df = pd.read_sql_query(query, conn, params=(min_count,))
     return df
+
+def get_incident_by_id(conn, incident_id):
+    """Get incident by id."""
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM cyber_incidents WHERE incident_id = ?", (incident_id,))
+    return cursor.fetchone()

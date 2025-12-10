@@ -5,10 +5,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 sys.path.append(BASE_DIR)
 
 import streamlit as st
-import pandas as pd
 import numpy as np
 from app.data.db import connect_database
-from app.data.incidents import get_all_incidents
 
 st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
 
@@ -27,11 +25,25 @@ if not st.session_state.logged_in:
 
 #if logged in, show dashboard
 conn = connect_database()
-incidents = get_all_incidents(conn)
 st.title("📊Dashboard")
 st.success(f"Hello, **{st.session_state.username}!** You are logged in.")
 
-st.dataframe(incidents, use_container_width = True)
+#put buttons to redirect to other dashboards
+st.subheader("Go to the other Dashboards")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("Cyber Incidents Dashboard"):
+        st.switch_page("pages/2_Cyber_Incidents_Dashboard.py")
+
+with col2:
+    if st.button("Datasets Dashboard"):
+        st.switch_page("pages/3_Datasets_Metadata_Dashboard.py")
+
+with col3:
+    if st.button("IT Tickets Dashboard"):
+        st.switch_page("pages/4_IT_Tickets_Dashboard.py")
 
 #Logout button
 st.divider()

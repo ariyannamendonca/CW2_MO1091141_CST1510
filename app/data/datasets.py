@@ -60,3 +60,26 @@ def get_dataset_by_uploader(conn, min_rows=1000):
     """
     df = pd.read_sql_query(query, conn, params=(min_rows,))
     return df
+
+def update_dataset_rows_columns(conn, dataset_id, rows, columns):
+    """Updates dataset rows and columns."""
+    sql = """
+    UPDATE datasets_metadata
+    SET rows = ?, 
+    columns = ?
+    WHERE dataset_id = ?;
+    """
+
+    params = (int(rows), int(columns), int(dataset_id))
+    rows_affected = 0
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        conn.commit()
+        rows_affected = cursor.rowcount
+        cursor.close()
+
+    except Exception as e:
+        print(f"Database error during update: {e}")
+
+    return rows_affected

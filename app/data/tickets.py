@@ -23,16 +23,16 @@ def get_tickets(conn):
     )
     return df
 
-def update_tickets(conn, ticket_id, assigned_to, status):
+def update_tickets(conn, ticket_id, status):
     """Updates tickets in database."""
     cursor = conn.cursor()
     sql_update = """
         UPDATE it_tickets
-        SET assigned_to = ?,, status = ?
+        SET status = ?
         WHERE ticket_id = ?
     """
 
-    cursor.execute(sql_update, (assigned_to, status, ticket_id))
+    cursor.execute(sql_update, (status, ticket_id))
     conn.commit()
     return cursor.rowcount
 
