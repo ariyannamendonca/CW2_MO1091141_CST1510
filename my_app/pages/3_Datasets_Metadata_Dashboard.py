@@ -4,6 +4,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 
+import pandas as pd
 import streamlit as st
 from app.data.db import connect_database
 from app.data.datasets import get_all_datasets, insert_dataset, update_dataset_rows_columns, delete_dataset
@@ -48,6 +49,7 @@ with st.form("update_form", clear_on_submit=True):
 
     with col3:
         upd_columns = st.number_input("New Column Count:", min_value=1, step=1, help="Enter updated number of columns.")
+
     with col4:
         st.write(" ")
         update_submitted = st.form_submit_button("Update Dimensions")
@@ -64,9 +66,9 @@ with st.form("update_form", clear_on_submit=True):
         else:
             st.error("Please select a Dataset ID to update.")
 
-st.header("Delete Incident")
+st.header("Delete Dataset")
 
-with st.form("delete_incident"):
+with st.form("delete_dataset"):
     del_id = st.number_input("Dataset ID to Delete", step=1)
     del_submit = st.form_submit_button("Delete Dataset")
 
@@ -77,6 +79,42 @@ if del_submit and del_id:
     else:
         st.error("Dataset **{del_id}** was not found.")
     st.rerun()
+
+st.title("Dataset Metadata Charts")
+st.header("Visualising Dataset Metrics")
+
+datasets = get_all_datasets(conn)
+
+if datasets.empty:
+    st.warning("No Datasets found!")
+else:
+    datasets['upload_date'] = pd.to_datetime(datasets['upload_date'], errors='coerce')
+    datasets.dropna(subset = ['upload_date'], inplace = True)
+
+    st.subheader("Line Chart: Datasets uploaded Over Time")
+
+    datasets_by_day = (
+        datasets.groupby(datasets['upload_date'].dt.date)
+        .size()
+        .reset_index(name='Count')
+        .rename(columns={'upload_date': 'date'})
+    )
+
+    datasets_by_day['date'] = pd.to_datetime(datasets_by_day['date'])
+    datasets_by_day.set_index('date', inplace=True)
+
+    st.line_chart(datasets_by_day['Count'])
+
+    st.divider()
+
+    st.subheader("Bar Chart: Arranged by who uploaded them")
+
+    category_counts = datasets['uploaded_by'].value_counts().reset_index()
+    category_counts.columns = ['uploaded by', 'Count']
+
+    st.bar_chart(category_counts.set_index('uploaded by'))
+
+    st.divider()
 
 if st.button("Back to Main Dashboard"):
     st.switch_page("pages/1_Dashboard.py")

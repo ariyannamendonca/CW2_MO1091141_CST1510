@@ -4,6 +4,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 
+import pandas as pd
 import streamlit as st
 from app.data.db import connect_database
 from app.data.tickets import get_tickets, insert_ticket, update_tickets, delete_ticket
@@ -78,6 +79,24 @@ if del_submit and del_id:
     else:
         st.error("Ticket **{del_id}** was not found.")
     st.rerun()
+
+st.title("IT Tickets Charts")
+st.header("Visualising Tickets Metrics")
+
+tickets = get_tickets(conn)
+
+if tickets.empty:
+    st.warning("No IT Tickets found!")
+else:
+    st.subheader("Bar Chart: Arranged by Priority")
+
+    priority_counts = tickets['priority'].value_counts().reset_index()
+    priority_counts.columns = ['priority', 'Count']
+
+    st.bar_chart(priority_counts.set_index('priority'))
+
+    st.divider()
+
 
 if st.button("Back to Main Dashboard"):
     st.switch_page("pages/1_Dashboard.py")

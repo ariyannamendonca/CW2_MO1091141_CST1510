@@ -4,6 +4,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 
+import pandas as pd
 import streamlit as st
 from app.data.db import connect_database
 from app.data.incidents import get_all_incidents, insert_incident, update_incident_status, delete_incident_status
@@ -75,6 +76,33 @@ if del_submit and del_id:
         st.error("Incident **{del_id}** was not found.")
     st.rerun()
 
+
+try:
+    incidents = get_all_incidents(conn)
+except Exception as e:
+    st.error(f"Error loading incidents for charts: {e}")
+    incidents = pd.DataFrame()
+
+st.title ("Cyber Incident Bar Chart")
+st.header("Visualising Key Incident Metrics:")
+
+if incidents.empty:
+    st.warning("No Incidents found to display charts!")
+else:
+    try:
+        incidents['created_at'] = pd.to_datetime(incidents['created_at'], errors='coerce')
+        incidents.dropna(subset = ['created_at'], inplace = True)
+    except Exception as e:
+        st.error(f"ERROR converting 'created_at' column: {e}")
+        st.stop()
+
+    category_counts = incidents['category'].value_counts().reset_index()
+    category_counts.columns = ['Category', 'Count']
+
+    st.divider()
+
+    st.header("Incident by Category")
+    st.bar_chart(category_counts.set_index('Category'))
+
 if st.button("Back to Main Dashboard"):
     st.switch_page("pages/1_Dashboard.py")
-
