@@ -11,6 +11,19 @@ from app.data.incidents import get_all_incidents, insert_incident, update_incide
 from google import genai
 from google.genai import types
 
+#Ensure state keys exist in case user opens this page first
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+#if not logged in send user back
+if not st.session_state.logged_in:
+    st.error("You must be logged in to view the Cyber Incidents Dashboard.")
+    if st.button("Go to login page"):
+        st.switch_page("Home.py")
+    st.stop()
+
 st.set_page_config(
     page_title="Cyber Incidents Dashboard",
     page_icon="🚨",
@@ -39,9 +52,13 @@ with st.form("new_incident"):
     submitted = st.form_submit_button("Add Incident")
 
 if submitted:
-    insert_incident(conn, str(date), category, severity, status, description, reported_by)
-    st.success("Incident Added Successfully!")
-    st.rerun()
+    success = insert_incident(conn, str(date), category, severity, status, description, reported_by)
+
+    if success:
+        st.success("Incident Added Successfully!")
+        st.rerun()
+    else:
+        st.error("Could not add incident!")
 
 st.header("Update Incident Status")
 

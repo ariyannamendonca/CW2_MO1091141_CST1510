@@ -1,6 +1,9 @@
 import sys
 import os
 
+from google import genai
+from google.genai import types
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 
@@ -9,12 +12,34 @@ import streamlit as st
 from app.data.db import connect_database
 from app.data.tickets import get_tickets, insert_ticket, update_tickets, delete_ticket
 
+#Ensure state keys exist in case user opens this page first
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+#if not logged in send user back
+if not st.session_state.logged_in:
+    st.error("You must be logged in to view the IT Tickets Dashboard.")
+    if st.button("Go to login page"):
+        st.switch_page("Home.py")
+    st.stop()
+
+st.set_page_config(
+    page_title="IT Tickets Dashboard",
+    page_icon="🛠️",
+    layout="wide",
+)
+
 conn = connect_database()
 
 st.title("IT Tickets Dashboard")
 
-tickets = get_tickets(conn)
-st.dataframe(tickets, use_container_width=True)
+tab_dashboard, tab_ai = st.tabs(["Manage IT Tickets", "IT Tickets AI Assistant"])
+
+with tab_dashboard:
+    tickets = get_tickets(conn)
+    st.dataframe(tickets, use_container_width=True)
 
 st.header("Add New Ticket")
 
@@ -32,9 +57,13 @@ with st.form("New_ticket"):
     submitted = st.form_submit_button("Add Ticket")
 
 if submitted:
-    insert_ticket(conn, ticket_id, priority, status, category, subject, description, created_date, resolved_date, resolution_time_hours, assigned_to)
-    st.success("Ticket Added Successfully!")
-    st.rerun()
+    success = (conn, ticket_id, priority, status, category, subject, description, created_date, resolved_date, resolution_time_hours, assigned_to)
+
+    if success:
+        st.success("IT Ticket successfully added!")
+        st.rerun()
+    else:
+        st.error("Could not add ticket!")
 
 st.header("Update Ticket Status")
 
@@ -97,6 +126,113 @@ else:
 
     st.divider()
 
+#Data Science AI Assistant
+def IT_tickets_assistant():
+    SYSTEM_PROMPT_CONTENT = """You are an IT Tickets assistant.
+    - Help users analyse IT support tickets
+    - Provide technical guidance.
+    - Evaluate ticket quality and give improvements.
+    - Use standard terminology.
+    - Prioritise actionable recommendations. 
+    Tone: Professional, technical, concise.
+    Format: Clear, structured responses"""
+
+    model = "gemini-2.5-flash"
+
+    try:
+        if "GEMINI_API_KEY" not in st.secrets:
+            st.error("Error: GEMINI API KEY not found in streamlit secrets.toml.")
+            st.stop()
+
+        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+    except Exception as e:
+        st.error(e)
+        return
+
+    st.title("🛡️ IT Tickets AI Assistant")
+    st.caption("Powered by Google Gemini")
+
+    if 'messages' not in st.session_state:
+        st.session_state.messages = [
+            {"role": "user", "content": SYSTEM_PROMPT_CONTENT},
+            {"role": "model", "content": "I am ready to help you with my expertise in IT Tickets."}
+        ]
+
+    st.subheader("Chat Controls")
+    message_count = len(st.session_state.messages) - 1
+    st.metric("Messages", message_count)
+
+    if st.button("🗑️ Clear Chat", use_container_width=True):
+        st.session_state.messages = [
+            {"role": "user", "content": SYSTEM_PROMPT_CONTENT},
+            {"role": "model", "content": "I am ready to help you with my expertise in IT Tickets."}
+        ]
+        st.rerun()
+
+    temperature = st.slider(
+        "Temperature",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.7,
+        step=0.1,
+        help="Higher values make output more creative/random"
+    )
+
+    config = types.GenerateContentConfig(temperature=temperature)
+
+    for i, message in enumerate(st.session_state.messages):
+        if i > 0:
+            display_role = "assistant" if message ["role"] == "model" else message["role"]
+            with st.chat_message(display_role):
+                st.markdown(message["content"])
+
+    prompt = st.chat_input("Ask about IT Tickets...")
+
+    if prompt:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        gemini_contents = []
+        for msg in st.session_state.messages:
+            role_name = "model" if msg["role"] == "assistant" else msg["role"]
+            if role_name in ["user", "model"]:
+                gemini_contents.append(
+                    types.Content(
+                        role=role_name,
+                        parts=[types.Part(text=msg["content"])],
+                    )
+                )
+
+        try:
+            with st.spinner(f"Analyzing using {model}..."):
+                response_stream = client.models.generate_content_stream(
+                    model=model,
+                    contents=gemini_contents,
+                    config=config
+                )
+
+            with st.chat_message("assistant"):
+                container = st.empty()
+                full_reply = ""
+
+                for chunk in response_stream:
+                    full_reply += chunk.text
+                    container.markdown(full_reply + "")
+
+                container.markdown(full_reply)
+
+            st.session_state.messages.append({
+                "role":"assistant",
+                "content":full_reply
+            })
+
+        except Exception as e:
+            st.error(f"An error occurred while calling the API: {e}")
 
 if st.button("Back to Main Dashboard"):
     st.switch_page("pages/1_Dashboard.py")
+
+with tab_ai:
+    IT_tickets_assistant()

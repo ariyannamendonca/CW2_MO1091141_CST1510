@@ -3,7 +3,7 @@ import os
 
 def hash_password(plain_text_pass):
     password_bytes = plain_text_pass.encode('utf-8') #converts plain text pass into bytes so it gets hashed
-    salt = bcrypt.gensalt() #combines with pass before hashing so hashed results r different
+    salt = bcrypt.gensalt() #combines with pass before hashing so hashed results are different
     hashed_password = bcrypt.hashpw(password_bytes, salt)
     return hashed_password
 

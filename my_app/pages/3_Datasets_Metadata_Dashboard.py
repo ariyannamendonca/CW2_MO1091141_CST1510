@@ -11,6 +11,19 @@ from app.data.datasets import get_all_datasets, insert_dataset, update_dataset_r
 from google import genai
 from google.genai import types
 
+#Ensure state keys exist in case user opens this page first
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+#if not logged in send user back
+if not st.session_state.logged_in:
+    st.error("You must be logged in to view the Datasets Metadata Dashboard.")
+    if st.button("Go to login page"):
+        st.switch_page("Home.py")
+    st.stop()
+
 st.set_page_config(
     page_title="Datasets Metadata Dashboard",
     page_icon="📈",
@@ -41,9 +54,13 @@ with st.form("new_dataset_metadata"):
     submitted = st.form_submit_button("Add Dataset")
 
 if submitted:
-    insert_dataset(conn, name, category, uploaded_by, uploaded_date, rows, columns, file_size_mb, created_at)
-    st.success("Dataset added successfully!")
-    st.rerun()
+    success = insert_dataset(conn, name, category, uploaded_by, uploaded_date, rows, columns, file_size_mb, created_at)
+
+    if success:
+        st.success("Dataset successfully added!")
+        st.rerun()
+    else:
+        st.error("Could not add incident!")
 
 st.header("Update Dataset_Metadata")
 
@@ -99,25 +116,6 @@ datasets = get_all_datasets(conn)
 if datasets.empty:
     st.warning("No Datasets found!")
 else:
-    datasets['upload_date'] = pd.to_datetime(datasets['upload_date'], errors='coerce')
-    datasets.dropna(subset = ['upload_date'], inplace = True)
-
-    st.subheader("Line Chart: Datasets uploaded Over Time")
-
-    datasets_by_day = (
-        datasets.groupby(datasets['upload_date'].dt.date)
-        .size()
-        .reset_index(name='Count')
-        .rename(columns={'upload_date': 'date'})
-    )
-
-    datasets_by_day['date'] = pd.to_datetime(datasets_by_day['date'])
-    datasets_by_day.set_index('date', inplace=True)
-
-    st.line_chart(datasets_by_day['Count'])
-
-    st.divider()
-
     st.subheader("Bar Chart: Arranged by who uploaded them")
 
     category_counts = datasets['uploaded_by'].value_counts().reset_index()
