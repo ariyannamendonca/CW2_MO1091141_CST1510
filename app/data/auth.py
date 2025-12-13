@@ -1,71 +1,110 @@
 import bcrypt
 import os
 
-def hash_password(plain_text_pass):
-    password_bytes = plain_text_pass.encode('utf-8') #converts plain text pass into bytes so it gets hashed
-    salt = bcrypt.gensalt() #combines with pass before hashing so hashed results are different
-    hashed_password = bcrypt.hashpw(password_bytes, salt)
-    return hashed_password
+USER_DATA_FILE = "../../DATA/user.txt"
 
-def verify_password(plain_text_pass, hashed_password):
-    password_bytes = plain_text_pass.encode('utf-8') #encodes what user entered to bytes
-    hashed_pass_bytes = hashed_password.encode('utf-8') #stored hash converted to bytes
-    return bcrypt.checkpw(password_bytes, hashed_pass_bytes) #salt rehashes password_bytes, compares both hashes
+class User:
+    """
+    Stores user information and does authentication
+    """
 
-USER_DATA_FILE = "../../DATA/user.txt" #file path where user.txt is stored
+    def __init__(self, username=None, password_hash=None, role='user'):
+        self.username = username
+        self.password_hash = password_hash
+        self.role = role
 
-def register_user(username, password):
-    open(USER_DATA_FILE, 'a').close()
-    for line in open(USER_DATA_FILE, 'r'):
-        existing_username = line.strip().split(',')[0]# checks if username is taken
-        if existing_username == username:
-            print("Error: Username already exists") #change it to username (name) alr exists
+    def hash_password(self, plain_text_pass):
+        """hash password using bcrypt"""
+        password_bytes = plain_text_pass.encode('utf-8')  # converts plain text pass into bytes so it gets hashed
+        salt = bcrypt.gensalt()  # combines with pass before hashing so hashed results are different
+        hashed_password = bcrypt.hashpw(password_bytes, salt)
+        return hashed_password.decode('utf-8')
+
+    def verify_password(self, plain_text_pass):
+        """verify users password"""
+        if self.password_hash:
+            return User.verify_hash_password(plain_text_pass, self.password_hash)
+        return False
+
+    def verify_hash_password(self, plain_text_pass, hashed_password):
+        """verify user entered password against the hashed password"""
+        password_bytes = plain_text_pass.encode('utf-8') #encodes what user entered to byte
+        if isinstance(hashed_password, str):
+            hashed_pass_bytes = hashed_password.encode('utf-8') #stored hash converted to bytes
+        else:
+            hashed_pass_bytes = hashed_password
+
+        return bcrypt.checkpw(password_bytes, hashed_pass_bytes) #salt rehashes password_bytes, compares both hashes
+
+    def get_role(self):
+        """Return user role"""
+        return self.role
+
+    def user_exists(self,username):
+        """checks if username exists in user.txt file"""
+        try:
+            with open(USER_DATA_FILE, 'r') as file:
+                for line in file:
+                    stored_user = line.strip().split(",")[0]
+                    if stored_user == username:
+                        return True
+        except FileNotFoundError:
+            pass
+        return False
+
+    def register_user(self,username, password):
+        """register new user"""
+        if self.user_exists(username):
+            print("Error: Username already exists")
             return False
 
-    hashed_password = hash_password(password).decode('utf-8')
+        hashed_password = self.hash_password(password)
+        if not os.path.exists(USER_DATA_FILE):
+            open (USER_DATA_FILE, 'a').close()
 
-    with open(USER_DATA_FILE, 'a') as file:
-        file.write(f'{username},{hashed_password}\n')
+        with open(USER_DATA_FILE, 'a') as file:
+            file.write(f"{username},{hashed_password},user\n")
 
-    print(f'{username} registered successfully!')
-    return True
+        print(f"{username} successfully registered")
+        return True
 
-def user_exists(username):
-    with open(USER_DATA_FILE, 'r') as file:
-        for line in file:
-            stored_user = line.strip().split(",")[0]
-            if stored_user == username:
-                return True
-    return False
+    def login(self, username, password):
+        """user login, user object is returned if successful"""
+        try:
+            with open(USER_DATA_FILE, 'r') as file:
+                for line in file:
+                    parts = line.strip().split(",")
 
-def login_user(username, password):
-    with open(USER_DATA_FILE, 'r') as file:
-        for line in file:
-            stored_user, stored_hash = line.strip().split(",")
+                    if len(parts) < 2:
+                        continue
 
-            if stored_user == username:
-                if verify_password(password, stored_hash):
-                    print("Login successful.")
-                    return True
-                else:
-                    print("Error: Invalid Password.")
-                    return False
-    print("Username not found")
-    return False
+                    stored_user = parts[0]
+                    stored_hash = parts[1]
+                    stored_role = parts[2] if len(parts) > 2 else 'user'
+
+                    if stored_user == username:
+                        if self.verify_hash_password(password, stored_hash):
+                            return User(username, stored_hash, stored_role)
+                        else:
+                            print("Error: Invalid Password")
+                            return None
+        except FileNotFoundError:
+            print("Error: File not found, please register")
+            return None
+
+        print("Username not found")
+        return None
 
 def validate_username(username):
-  if len(username) < 2:
-      print ("Username too short.")
-      return False
-  if "_ , *" in username:
-      print ("Username cant contain this.")
-      return False
-  return True, ""
+    if len(username) < 2:
+        return False, "This username is too short"
+    if any(char in username for char in "- * ,"):
+        return False, "Username cant contain '-', '*', or ','"
+    return True, ""
 
 def validate_password(password):
     if len(password) < 8:
-        print ("Password too short, need at least 8 characters.")
-        return False
+        return False, "This password is too short, need 8 or more characters"
     return True, ""
 
 def display_menu():
@@ -113,7 +152,8 @@ def main():
                 continue
 
             #register the user
-            register_user(username, password)
+            user = User()
+            user.register_user(username, password)
 
         elif choice == '2':
             #Login flow
@@ -122,12 +162,18 @@ def main():
             password = input("Enter a password: ").strip()
 
             #Attempt login
-            if login_user(username, password):
+            user = User()
+            logged_in_user = user.login(username, password)
+
+            if logged_in_user:
+                print(f"Logged in successfully. Welcome, {logged_in_user.username}!")
+                print(f"Your role is: {logged_in_user.get_role()}")
+
                 input("\nPress enter to return to main menu...")
 
         elif choice == '3':
             #exit
-            print("\n Thank you for using Week 7 Authentication System!")
+            print("\n Thank you for using the Authentication System!")
             print("Exiting...")
             break
         else:

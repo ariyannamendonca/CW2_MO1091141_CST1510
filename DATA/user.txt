@@ -1,3 +1,4 @@
 alice,$2b$12$hwXyeFBPJOW3gpQgBATrBu5aPySvbLu9JKVcZZiIqwkIt.IFj.VL2
 bob,$2b$12$Rn5zdnQSjgxPvfa8nFryquSW.qbdI0jGnDcHPjjGA9ZPLd6tiDXoi
 anna12,$2b$12$t21cSofPur08cbwAbmAn9.HqHac7TMxa38a0mTCPsZ8f1ZiDuelW.,user
+charlie,$2b$12$d9NOrf2tAV9j1A0HQ9djEef938kP1iefSy3k.siQgzrScV5JRY4ra,user
