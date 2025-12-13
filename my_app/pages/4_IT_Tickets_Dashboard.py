@@ -1,5 +1,7 @@
 import sys
 import os
+import pandas as pd
+import streamlit as st
 
 from google import genai
 from google.genai import types
@@ -7,10 +9,8 @@ from google.genai import types
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 
-import pandas as pd
-import streamlit as st
 from app.data.db import connect_database
-from app.data.tickets import get_tickets, insert_ticket, update_tickets, delete_ticket
+from app.data.tickets import ITickets
 
 #Ensure state keys exist in case user opens this page first
 if "logged_in" not in st.session_state:
@@ -32,102 +32,97 @@ st.set_page_config(
 )
 
 conn = connect_database()
+it_tickets = ITickets(conn)
 
 st.title("IT Tickets Dashboard")
 
 tab_dashboard, tab_ai = st.tabs(["Manage IT Tickets", "IT Tickets AI Assistant"])
 
 with tab_dashboard:
-    tickets = get_tickets(conn)
+    tickets =it_tickets.get_tickets()
     st.dataframe(tickets, use_container_width=True)
 
-st.header("Add New Ticket")
+    st.header("Add New Ticket")
 
-with st.form("New_ticket"):
-    ticket_id = st.text_input("Ticket ID")
-    priority = st.selectbox("Priority", ["Low", "Medium", "High", "Critical"])
-    status = st.selectbox("Status", ["Open", "Resolved"])
-    category = st.text_input("Category")
-    subject = st.text_input("Subject")
-    description = st.text_area("Description")
-    created_date = st.text_input("Created Date")
-    resolved_date = st.text_input("Resolved Date")
-    resolution_time_hours = st.text_input("Resolution Time in Hours")
-    assigned_to = st.text_input("Assigned To")
-    submitted = st.form_submit_button("Add Ticket")
+    with st.form("New_ticket"):
+        ticket_id = st.text_input("Ticket ID")
+        priority = st.selectbox("Priority", ["Low", "Medium", "High", "Critical"])
+        status = st.selectbox("Status", ["Open", "Resolved"])
+        category = st.text_input("Category")
+        subject = st.text_input("Subject")
+        description = st.text_area("Description")
+        created_date = st.text_input("Created Date")
+        resolved_date = st.text_input("Resolved Date")
+        resolution_time_hours = st.text_input("Resolution Time in Hours")
+        assigned_to = st.text_input("Assigned To")
+        submitted = st.form_submit_button("Add Ticket")
 
-if submitted:
-    success = (conn, ticket_id, priority, status, category, subject, description, created_date, resolved_date, resolution_time_hours, assigned_to)
-
-    if success:
-        st.success("IT Ticket successfully added!")
-        st.rerun()
-    else:
-        st.error("Could not add ticket!")
-
-st.header("Update Ticket Status")
-
-ticket_ids = tickets['ticket_id'].tolist() if not tickets.empty else[]
-status_options = ["Open", "Waiting for User", "In Progress", "Resolved"]
-
-with st.form("update_status_form", clear_on_submit=True):
-    col1, col2, col3 = st.columns([1,1, 0.7])
-
-    with col1:
-        upd_id = st.selectbox("Ticket ID:", ticket_ids, help="Select Ticket ID you want to modify.")
-
-    with col2:
-        upd_status = st.selectbox("New Status:", status_options, help="Choose new status for the selected ticket.")
-
-    with col3:
-        st.write(" ")
-        update_submitted = st.form_submit_button("Update Status")
-
-    if update_submitted:
-        if upd_id:
-            rows_affected = update_tickets(conn, upd_id, upd_status)
-
-            if rows_affected > 0:
-                st.success(f"Status for Ticket ID **{upd_id}** has been updated to **{upd_status}**.")
-                st.rerun()
-            else:
-                st.warning(f"Ticket ID **{upd_id}** was not found or status is already set to **{upd_status}**.")
+    if submitted:
+        ticket_id_submitted = it_tickets.insert_ticket(ticket_id, priority, status, category, subject, description, created_date, resolved_date, resolution_time_hours, assigned_to)
+        if ticket_id_submitted:
+            st.success("IT Ticket successfully added!")
         else:
-            st.error("Please select a Ticket ID to update.")
+            st.error("Could not add ticket!")
 
-st.header("Delete Ticket")
+    st.header("Update Ticket Status")
+    ticket_ids = tickets['ticket_id'].tolist() if not tickets.empty else[]
+    status_options = ["Open", "Waiting for User", "In Progress", "Resolved"]
 
-with st.form("delete_ticket"):
-    del_id = st.number_input("Ticket ID to Delete", step=1)
-    del_submit = st.form_submit_button("Delete Ticket")
+    with st.form("update_status_form", clear_on_submit=True):
+        col1, col2, col3 = st.columns([1,1, 0.7])
 
-if del_submit and del_id:
-    rows = delete_ticket(conn, del_id)
-    if rows:
-        st.success(f"Ticket **{del_id}** has been deleted.")
+        with col1:
+            upd_id = st.selectbox("Ticket ID:", ticket_ids, help="Select Ticket ID you want to modify.")
+
+        with col2:
+            upd_status = st.selectbox("New Status:", status_options, help="Choose new status for the selected ticket.")
+
+        with col3:
+            st.write(" ")
+            update_submitted = st.form_submit_button("Update Status")
+
+        if update_submitted:
+            if upd_id:
+                rows_affected = it_tickets.update_tickets(upd_id, upd_status)
+
+                if rows_affected > 0:
+                    st.success(f"Status for Ticket ID **{upd_id}** has been updated to **{upd_status}**.")
+                    st.rerun()
+                else:
+                    st.warning(f"Ticket ID **{upd_id}** was not found or status is already set to **{upd_status}**.")
+            else:
+                st.error("Please select a Ticket ID to update.")
+
+    st.header("Delete Ticket")
+    with st.form("delete_ticket"):
+        del_id = st.number_input("Ticket ID to Delete", step=1)
+        del_submit = st.form_submit_button("Delete Ticket")
+
+    if del_submit and del_id:
+        rows_deleted = it_tickets.delete_ticket(del_id)
+        if rows_deleted:
+            st.success(f"Ticket **{del_id}** has been deleted.")
+        else:
+            st.error("Ticket **{del_id}** was not found.")
+
+    st.title("IT Tickets Charts")
+    st.header("Visualising Tickets Metrics")
+
+    tickets = it_tickets.get_tickets()
+    if tickets.empty:
+        st.warning("No IT Tickets found!")
     else:
-        st.error("Ticket **{del_id}** was not found.")
-    st.rerun()
+        st.subheader("Bar Chart: Arranged by Priority")
 
-st.title("IT Tickets Charts")
-st.header("Visualising Tickets Metrics")
+        priority_counts = tickets['priority'].value_counts().reset_index()
+        priority_counts.columns = ['priority', 'Count']
 
-tickets = get_tickets(conn)
+        st.bar_chart(priority_counts.set_index('priority'))
 
-if tickets.empty:
-    st.warning("No IT Tickets found!")
-else:
-    st.subheader("Bar Chart: Arranged by Priority")
-
-    priority_counts = tickets['priority'].value_counts().reset_index()
-    priority_counts.columns = ['priority', 'Count']
-
-    st.bar_chart(priority_counts.set_index('priority'))
-
-    st.divider()
+        st.divider()
 
 #Data Science AI Assistant
-def IT_tickets_assistant():
+def it_tickets_assistant():
     SYSTEM_PROMPT_CONTENT = """You are an IT Tickets assistant.
     - Help users analyse IT support tickets
     - Provide technical guidance.
@@ -235,4 +230,4 @@ if st.button("Back to Main Dashboard"):
     st.switch_page("pages/1_Dashboard.py")
 
 with tab_ai:
-    IT_tickets_assistant()
+    it_tickets_assistant()

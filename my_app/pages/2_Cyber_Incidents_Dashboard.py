@@ -1,13 +1,13 @@
 import sys
 import os
+import pandas as pd
+import streamlit as st
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 
-import pandas as pd
-import streamlit as st
 from app.data.db import connect_database
-from app.data.incidents import get_all_incidents, insert_incident, update_incident_status, delete_incident_status
+from app.data.incidents import Cyberincidents
 from google import genai
 from google.genai import types
 
@@ -31,105 +31,102 @@ st.set_page_config(
 )
 
 conn = connect_database()
+cyber_incidents = Cyberincidents(conn)
 
 st.title("Cyber Incidents Dashboard")
 
 tab_dashboard, tab_ai = st.tabs(["Manage Cyber Incidents", "Cybersecurity AI Assistant"])
 
 with tab_dashboard:
-    incidents = get_all_incidents(conn)
+    incidents = cyber_incidents.get_all_incidents()
     st.dataframe(incidents, use_container_width=True)
 
     st.header("Add New Incident")
+    with st.form("new_incident"):
+        date = st.date_input("Date of incident")
+        category = st.text_input("Category")
+        severity = st.selectbox("Severity", ["Low", "Medium", "High", "Critical"])
+        status = st.selectbox("Status", ["Open", "In Progress", "Resolved"])
+        description = st.text_input("Description")
+        reported_by = st.text_input("Reported by")
+        submitted = st.form_submit_button("Add Incident")
 
-with st.form("new_incident"):
-    date = st.date_input("Date of incident")
-    category = st.text_input("Category")
-    severity = st.selectbox("Severity", ["Low", "Medium", "High", "Critical"])
-    status = st.selectbox("Status", ["Open", "In Progress", "Resolved"])
-    description = st.text_input("Description")
-    reported_by = st.text_input("Reported by")
-    submitted = st.form_submit_button("Add Incident")
+    if submitted:
+        new_incident_id = cyber_incidents.insert_incident(str(date), category, severity, status, description, reported_by)
 
-if submitted:
-    success = insert_incident(conn, str(date), category, severity, status, description, reported_by)
-
-    if success:
-        st.success("Incident Added Successfully!")
-        st.rerun()
-    else:
-        st.error("Could not add incident!")
-
-st.header("Update Incident Status")
-
-incidents_ids = incidents['incident_id'].tolist() if not incidents.empty else[]
-status_options = ["Open", "In Progress", "Resolved"]
-
-with st.form("update_status_form", clear_on_submit=True):
-    col1, col2, col3 = st.columns([1,1, 0.7])
-
-    with col1:
-        upd_id = st.selectbox("Incident ID:", incidents_ids, help="Select Incident ID you want to modify.")
-
-    with col2:
-        upd_status = st.selectbox("New Status:", status_options, help="Choose new status for the selected incident.")
-
-    with col3:
-        st.write(" ")
-        update_submitted = st.form_submit_button("Update Status")
-
-    if update_submitted:
-        if upd_id:
-            rows_affected = update_incident_status(conn, upd_id, upd_status)
-
-            if rows_affected > 0:
-                st.success(f"Status for Incident ID **{upd_id}** has been updated to **{upd_status}**.")
-                st.rerun()
-            else:
-                st.warning(f"Incident ID **{upd_id}** was not found or status is already set to **{upd_status}**.")
+        if new_incident_id:
+            st.success("Incident Added Successfully!")
         else:
-            st.error("Please select an incident ID to update.")
+            st.error("Could not add incident!")
 
-st.header("Delete Incident")
+    st.header("Update Incident Status")
+    incidents_ids = incidents['incident_id'].tolist() if not incidents.empty else[]
+    status_options = ["Open", "In Progress", "Resolved"]
 
-with st.form("delete_incident"):
-    del_id = st.number_input("Incident ID to Delete", step=1)
-    del_submit = st.form_submit_button("Delete Incident")
+    with st.form("update_status_form", clear_on_submit=True):
+        col1, col2, col3 = st.columns([1,1, 0.7])
 
-if del_submit and del_id:
-    rows = delete_incident_status(conn, del_id)
-    if rows:
-        st.success(f"Incident **{del_id}** has been deleted.")
-    else:
-        st.error("Incident **{del_id}** was not found.")
-    st.rerun()
+        with col1:
+            upd_id = st.selectbox("Incident ID:", incidents_ids, help="Select Incident ID you want to modify.")
 
-try:
-    incidents = get_all_incidents(conn)
-except Exception as e:
-    st.error(f"Error loading incidents for charts: {e}")
-    incidents = pd.DataFrame()
+        with col2:
+            upd_status = st.selectbox("New Status:", status_options, help="Choose new status for the selected incident.")
 
-st.title ("Cyber Incident Bar Chart")
-st.header("Visualising Key Incident Metrics:")
+        with col3:
+            st.write(" ")
+            update_submitted = st.form_submit_button("Update Status")
 
-if incidents.empty:
-    st.warning("No Incidents found to display charts!")
-else:
+        if update_submitted:
+            if upd_id:
+                rows_affected = cyber_incidents.update_incident_status(upd_id, upd_status)
+
+                if rows_affected > 0:
+                    st.success(f"Status for Incident ID **{upd_id}** has been updated to **{upd_status}**.")
+                    st.rerun()
+                else:
+                    st.warning(f"Incident ID **{upd_id}** was not found or status is already set to **{upd_status}**.")
+            else:
+                st.error("Please select an incident ID to update.")
+
+    st.header("Delete Incident")
+    with st.form("delete_incident"):
+        del_id = st.number_input("Incident ID to Delete", step=1)
+        del_submit = st.form_submit_button("Delete Incident")
+
+    if del_submit and del_id:
+        rows = cyber_incidents.delete_incident_status(del_id)
+        if rows:
+            st.success(f"Incident **{del_id}** has been deleted.")
+        else:
+            st.error("Incident **{del_id}** was not found.")
+        st.rerun()
+
     try:
-        incidents['created_at'] = pd.to_datetime(incidents['created_at'], errors='coerce')
-        incidents.dropna(subset = ['created_at'], inplace = True)
+        incidents = cyber_incidents.get_all_incidents()
     except Exception as e:
-        st.error(f"ERROR converting 'created_at' column: {e}")
-        st.stop()
+        st.error(f"Error loading incidents for charts: {e}")
+        incidents = pd.DataFrame()
 
-    category_counts = incidents['category'].value_counts().reset_index()
-    category_counts.columns = ['Category', 'Count']
+    st.title ("Cyber Incident Bar Chart")
+    st.header("Visualising Key Incident Metrics:")
 
-    st.divider()
+    if incidents.empty:
+        st.warning("No Incidents found to display charts!")
+    else:
+        try:
+            incidents['created_at'] = pd.to_datetime(incidents['created_at'], errors='coerce')
+            incidents.dropna(subset = ['created_at'], inplace = True)
+        except Exception as e:
+            st.error(f"ERROR converting 'created_at' column: {e}")
+            st.stop()
 
-    st.header("Incident by Category")
-    st.bar_chart(category_counts.set_index('Category'))
+        category_counts = incidents['category'].value_counts().reset_index()
+        category_counts.columns = ['Category', 'Count']
+
+        st.divider()
+
+        st.header("Incident by Category")
+        st.bar_chart(category_counts.set_index('Category'))
 
 #Cybersecurity AI Assistant
 def cybersecurity_assistant():
