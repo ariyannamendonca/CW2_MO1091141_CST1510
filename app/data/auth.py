@@ -9,6 +9,7 @@ class User:
     """
 
     def __init__(self, username=None, password_hash=None, role='user'):
+        """Constructor for user class"""
         self.username = username
         self.password_hash = password_hash
         self.role = role
@@ -21,7 +22,7 @@ class User:
         return hashed_password.decode('utf-8')
 
     def verify_password(self, plain_text_pass):
-        """verify users password"""
+        """verify user password"""
         if self.password_hash:
             return User.verify_hash_password(plain_text_pass, self.password_hash)
         return False
@@ -53,12 +54,12 @@ class User:
         return False
 
     def register_user(self,username, password):
-        """register new user"""
+        """register new user by checking if they exist in the user.txt file"""
         if self.user_exists(username):
             print("Error: Username already exists")
             return False
 
-        hashed_password = self.hash_password(password)
+        hashed_password = self.hash_password(password) #hash plain text pass then stores it
         if not os.path.exists(USER_DATA_FILE):
             open (USER_DATA_FILE, 'a').close()
 
@@ -83,8 +84,8 @@ class User:
                     stored_role = parts[2] if len(parts) > 2 else 'user'
 
                     if stored_user == username:
-                        if self.verify_hash_password(password, stored_hash):
-                            return User(username, stored_hash, stored_role)
+                        if self.verify_hash_password(password, stored_hash): #verify user entered pass against the stored hash
+                            return User(username, stored_hash, stored_role) #logged in successfully
                         else:
                             print("Error: Invalid Password")
                             return None
@@ -96,6 +97,7 @@ class User:
         return None
 
 def validate_username(username):
+    """checks length and format of username"""
     if len(username) < 2:
         return False, "This username is too short"
     if any(char in username for char in "- * ,"):
@@ -103,6 +105,7 @@ def validate_username(username):
     return True, ""
 
 def validate_password(password):
+    """checks length of password"""
     if len(password) < 8:
         return False, "This password is too short, need 8 or more characters"
     return True, ""
@@ -119,7 +122,7 @@ def display_menu():
     print("-"*50)
 
 def main():
-    """Main program loop."""
+    """Main program loop and the user interface to register or log in."""
     print("\nWelcome to the Week 7 Authentication System!")
 
     while True:

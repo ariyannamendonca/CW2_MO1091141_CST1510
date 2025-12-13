@@ -10,7 +10,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 sys.path.append(BASE_DIR)
 
 from app.data.db import connect_database
-from app.data.tickets import ITickets
+from app.data.tickets import ITtickets
 
 #Ensure state keys exist in case user opens this page first
 if "logged_in" not in st.session_state:
@@ -32,7 +32,7 @@ st.set_page_config(
 )
 
 conn = connect_database()
-it_tickets = ITickets(conn)
+it_tickets = ITtickets(conn)
 
 st.title("IT Tickets Dashboard")
 

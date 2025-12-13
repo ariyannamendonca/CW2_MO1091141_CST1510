@@ -1,7 +1,7 @@
 import pandas as pd
 from app.data.db import connect_database
 
-class ITickets:
+class ITtickets:
     """does CRUD functions and analytical queries for IT tickets"""
 
     def __init__(self, conn):
